@@ -1,0 +1,20 @@
+SRC := $(shell find . -iname "*.c")
+OBJ := $(patsubst %.c,%.c.o,$(SRC))
+
+EXE := main.x
+
+.PHONY: $(EXE) ctest_run.h
+
+CFLAGS += -I..
+
+$(EXE): $(OBJ)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJ) -o $(EXE)
+
+main.c: ctest_run.h
+
+ctest_run.h:
+	../ctest_headers.sh
+
+%.c.o: %.c
+	$(CC) $(CFLAGS) -c $^ -o $@
+
