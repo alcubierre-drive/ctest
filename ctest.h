@@ -76,7 +76,10 @@ struct SUITE##_testfunc_t { \
         *ncases_run = nc_run; \
     } \
     testsuite_t register_##SUITE( void ) { \
-        return (testsuite_t){ .name = #SUITE, .run = &SUITE }; \
+        testsuite_t r; \
+        r.name = #SUITE; \
+        r.run = &SUITE; \
+        return r; \
     }
 
 #define ASSERT( expr ) { \

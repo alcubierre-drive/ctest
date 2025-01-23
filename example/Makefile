@@ -13,7 +13,7 @@ $(EXE): $(OBJ)
 main.c: ctest_run.h
 
 ctest_run.h:
-	../ctest_headers.sh -i test/ -o ctest_run.h
+	../ctest_run.sh -i test/ -o ctest_run.h
 
 %.c.o: %.c
 	$(CC) $(CFLAGS) -c $^ -o $@
