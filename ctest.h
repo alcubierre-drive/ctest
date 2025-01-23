@@ -8,6 +8,12 @@
 #include <stdlib.h>
 #endif
 
+#ifdef __cplusplus
+#define CTEST_EXPORT extern "C"
+#else
+#define CTEST_EXPORT
+#endif
+
 typedef struct {
     const char* name;
     void (*run)( unsigned* nassert, unsigned* npassed, unsigned* ncases,
@@ -80,7 +86,7 @@ struct SUITE##_testfunc_t { \
         *ncases = nc; \
         *ncases_run = nc_run; \
     } \
-    testsuite_t register_##SUITE( void ) { \
+    CTEST_EXPORT testsuite_t register_##SUITE( void ) { \
         testsuite_t r; \
         r.name = #SUITE; \
         r.run = &SUITE; \

@@ -53,12 +53,7 @@ cat <<EOF > "$outfile"
  * BEFORE INCLUDING THIS HEADER FILE ('$outfile').
  */
 
-#ifndef CTEST_NO_FORK
-#include <sys/wait.h>
-#include <unistd.h>
-#include <stdlib.h>
-#endif
-#include <ctest.h>
+#include "ctest.h"
 
 EOF
 

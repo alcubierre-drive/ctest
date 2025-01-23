@@ -1,4 +1,4 @@
-#include "ctest.h"
+#include "../ctest.h"
 
 INI_SUITE( TESTSUITE, yos ) {
     CTEST_CHK( 1 );
