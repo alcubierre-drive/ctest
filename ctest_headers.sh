@@ -36,7 +36,7 @@ done
 
 cat <<EOF >> "$outfile"
 
-static int ctest_run( int* pargc, char*** pargv ) {
+static int ctest_run( int argc, char** argv ) {
     testsuite_t suites[${#funcs[@]}] = {0};
     unsigned suites_sz = 0;
 EOF
@@ -64,9 +64,13 @@ cat <<EOF >> "$outfile"
             exit(EXIT_FAILURE);
         }
 
+        char** filters = argv;
+        filters[argc] = NULL;
+        filters++; // skip argv[0]
+
         pid_t p = fork();
         if (p == 0) { // child
-            suites[s].run(&nassert, &npassed, &ncases, &ncases_run, *pargv+1);
+            suites[s].run(&nassert, &npassed, &ncases, &ncases_run, filters);
             close(pipefd[0]);
             write(pipefd[1], &nassert, sizeof nassert);
             write(pipefd[1], &npassed, sizeof npassed);
@@ -84,7 +88,7 @@ cat <<EOF >> "$outfile"
             waitpid( p, &retval, 0 );
         }
         #else // CTEST_NO_FORK
-        suites[s].run(&nassert, &npassed, &nfiltered, &ncases, &ncases_run, *pargv+1);
+        suites[s].run(&nassert, &npassed, &nfiltered, &ncases, &ncases_run, filters);
         #endif // CTEST_NO_FORK
 
         nassert_total += nassert;
