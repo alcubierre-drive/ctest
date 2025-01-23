@@ -2,6 +2,30 @@
 
 suites_dir="test/"
 outfile="ctest_run.h"
+
+if [ -z "$1" ]; then
+    echo "print help with $(basename "$0") -h"
+fi
+while getopts "i:o:h" opt; do
+    case "$opt" in
+        h)
+            echo -e \
+                "usage: $(basename "$0")\n\
+                    [-i test dir (default: 'test/')]\n\
+                    [-o output file (default: 'ctest_run.h')]"
+            exit 0
+            ;;
+        i)
+            suites_dir="$OPTARG"
+            ;;
+        f)
+            outfile="$OPTARG"
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+[ "$1" = "--" ] && shift
+
 suites=( $(find "$suites_dir" -iname "*.c") )
 
 cat <<EOF > "$outfile"
@@ -38,12 +62,12 @@ cat <<EOF >> "$outfile"
 
 static int ctest_run( int argc, char** argv ) {
     testsuite_t suites[${#funcs[@]}] = {0};
-    unsigned suites_sz = 0;
+    unsigned nsuites = 0;
 EOF
 
 # register all testsuites
 for ((i=0; i<${#funcs[@]}; i++)); do
-    echo "    suites[suites_sz++] = ${funcs[$i]}();" >> "$outfile"
+    echo "    suites[nsuites++] = ${funcs[$i]}();" >> "$outfile"
 done
 
 cat <<EOF >> "$outfile"
@@ -52,7 +76,7 @@ cat <<EOF >> "$outfile"
              ncrashed = 0;
     unsigned successes = 0;
 
-    for (unsigned s=0; s<suites_sz; ++s) {
+    for (unsigned s=0; s<nsuites; ++s) {
         unsigned nassert = 0, npassed = 0, ncases = 0, ncases_run = 0;
         int retval = 0;
         char** filters = argv;
@@ -114,10 +138,10 @@ cat <<EOF >> "$outfile"
 
     printf( "%s=== ctest report ===%s\n", ctest_color_yellow, ctest_color_reset );
     printf( "%s=== crashed %u/%u suites with %u/%u failed assertions in %u/%u cases ===%s\n",
-        successes == suites_sz ? ctest_color_green : ctest_color_red,
-        ncrashed, suites_sz, nassert_total - npassed_total, nassert_total,
+        successes == nsuites ? ctest_color_green : ctest_color_red,
+        ncrashed, nsuites, nassert_total - npassed_total, nassert_total,
         ncases_run_total, ncases_total, ctest_color_reset );
 
-    return !(successes == suites_sz);
+    return !(successes == nsuites);
 }
 EOF
