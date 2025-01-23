@@ -84,77 +84,10 @@ for ((i=0; i<${#funcs[@]}; i++)); do
 done
 
 cat <<EOF >> "$outfile"
-    unsigned npassed_total = 0, nassert_total = 0,
-             ncases_total = 0, ncases_run_total = 0,
-             ncrashed = 0;
-    unsigned successes = 0;
 
-    for (unsigned s=0; s<nsuites; ++s) {
-        unsigned nassert = 0, npassed = 0, ncases = 0, ncases_run = 0;
-        int retval = 0;
-        char** filters = argv;
-        filters[argc] = NULL;
-        filters++; // skip argv[0]
-
-        #ifndef CTEST_NO_FORK
-        int pipefd[2] = {0};
-
-        if (pipe(pipefd) == -1) {
-            printf("cannot setup pipe\n");
-            exit(EXIT_FAILURE);
-        }
-
-        pid_t p = fork();
-        if (p == 0) { // child
-            suites[s].run(&nassert, &npassed, &ncases, &ncases_run, filters);
-            close(pipefd[0]);
-            write(pipefd[1], &nassert, sizeof nassert);
-            write(pipefd[1], &npassed, sizeof npassed);
-            write(pipefd[1], &ncases, sizeof ncases);
-            write(pipefd[1], &ncases_run, sizeof ncases_run);
-            close(pipefd[1]);
-            exit(EXIT_SUCCESS);
-        } else {
-            close(pipefd[1]);
-            read(pipefd[0], &nassert, sizeof nassert);
-            read(pipefd[0], &npassed, sizeof npassed);
-            read(pipefd[0], &ncases, sizeof ncases);
-            read(pipefd[0], &ncases_run, sizeof ncases_run);
-            close(pipefd[0]);
-            waitpid( p, &retval, 0 );
-        }
-        #else // CTEST_NO_FORK
-        suites[s].run(&nassert, &npassed, &ncases, &ncases_run, filters);
-        #endif // CTEST_NO_FORK
-
-        nassert_total += nassert;
-        npassed_total += npassed;
-        ncases_total += ncases;
-        ncases_run_total += ncases_run;
-        unsigned suite_success = (npassed == nassert) && !retval;
-        if (retval) {
-            ncrashed++;
-            printf( "%s=== CRASHED:%i ctest suite '%s' ===%s\n", ctest_color_red,
-                retval, suites[s].name, ctest_color_reset );
-        } else {
-            if (ncases_run > 0) {
-                printf( "%s=== passed %u/%u assertions in %u/%u cases of suite '%s' ===%s\n",
-                    suite_success ? ctest_color_green : ctest_color_red, npassed,
-                    nassert, ncases_run, ncases, suites[s].name, ctest_color_reset );
-            } else {
-                printf( "%s=== filtered out suite '%s'===%s\n", ctest_color_yellow,
-                    suites[s].name, ctest_color_reset );
-            }
-        }
-        successes += suite_success;
-    }
-
-    printf( "%s=== ctest report ===%s\n", ctest_color_yellow, ctest_color_reset );
-    printf( "%s=== crashed %u/%u suites with %u/%u failed assertions in %u/%u cases ===%s\n",
-        successes == nsuites ? ctest_color_green : ctest_color_red,
-        ncrashed, nsuites, nassert_total - npassed_total, nassert_total,
-        ncases_run_total, ncases_total, ctest_color_reset );
-
-    return !(successes == nsuites);
+    char** filters = argv;
+    filters[argc] = NULL;
+    filters++; // skip argv[0]
+    return ctest_run_suites( suites, nsuites, filters );
 }
 EOF

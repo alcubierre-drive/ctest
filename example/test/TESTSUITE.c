@@ -1,12 +1,12 @@
 #include "ctest.h"
 
 INI_SUITE( TESTSUITE, yos ) {
-    ASSERT( 1 );
-    /* ASSERT( 0 ); */
+    CTEST_CHK( 1 );
+    /* CTEST_CHK( 0 ); */
 }
 NEXT_CASE( TESTSUITE, nos, yos ) {
-    ASSERT( 1 );
-    /* ASSERT( 0 ); */
+    CTEST_CHK( 1 );
+    /* CTEST_CHK( 0 ); */
 }
 NEXT_CASE( TESTSUITE, dos, nos ) {
     char* ptr = NULL;

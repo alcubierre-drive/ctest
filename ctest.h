@@ -2,6 +2,11 @@
 
 #include <stdio.h>
 #include <string.h>
+#ifndef CTEST_NO_FORK
+#include <sys/wait.h>
+#include <unistd.h>
+#include <stdlib.h>
+#endif
 
 typedef struct {
     const char* name;
@@ -82,7 +87,7 @@ struct SUITE##_testfunc_t { \
         return r; \
     }
 
-#define ASSERT( expr ) { \
+#define CTEST_CHK( expr ) { \
     __nasserts++; \
     if (!(expr)) { \
         __nproblems++; \
@@ -91,4 +96,70 @@ struct SUITE##_testfunc_t { \
     } \
 }
 
+static inline int ctest_run_suites( testsuite_t* suites, unsigned nsuites, char** filters ) {
+    unsigned npassed_total = 0, nassert_total = 0,
+             ncases_total = 0, ncases_run_total = 0,
+             ncrashed = 0;
+    unsigned successes = 0;
+    for (unsigned s=0; s<nsuites; ++s) {
+        unsigned nums[4] = {0}; // nassert, npassed, ncases, ncases_run
+        int retval = 0;
 
+        #ifndef CTEST_NO_FORK
+        int pipefd[2] = {0};
+
+        if (pipe(pipefd) == -1) {
+            CTEST_PRINTF("cannot setup pipe\n");
+            exit(EXIT_FAILURE);
+        }
+
+        pid_t p = fork();
+        if (p == 0) { // child
+            suites[s].run(&nums[0], &nums[1], &nums[2], &nums[3], filters);
+            close(pipefd[0]);
+            write(pipefd[1], nums, sizeof nums);
+            close(pipefd[1]);
+            exit(EXIT_SUCCESS);
+        } else {
+            close(pipefd[1]);
+            read(pipefd[0], nums, sizeof nums);
+            close(pipefd[0]);
+            waitpid( p, &retval, 0 );
+        }
+        #else // CTEST_NO_FORK
+        suites[s].run(&nums[0], &nums[1], &nums[2], &nums[3], filters);
+        #endif // CTEST_NO_FORK
+
+        unsigned nassert = nums[0], npassed = nums[1],
+                 ncases = nums[2], ncases_run = nums[3];
+
+        nassert_total += nassert;
+        npassed_total += npassed;
+        ncases_total += ncases;
+        ncases_run_total += ncases_run;
+        unsigned suite_success = (npassed == nassert) && !retval;
+        if (retval) {
+            ncrashed++;
+            CTEST_PRINTF( "%s=== CRASHED:%i ctest suite '%s' ===%s\n", ctest_color_red,
+                retval, suites[s].name, ctest_color_reset );
+        } else {
+            if (ncases_run > 0) {
+                CTEST_PRINTF( "%s=== passed %u/%u assertions in %u/%u cases of suite '%s' ===%s\n",
+                    suite_success ? ctest_color_green : ctest_color_red, npassed,
+                    nassert, ncases_run, ncases, suites[s].name, ctest_color_reset );
+            } else {
+                CTEST_PRINTF( "%s=== filtered out suite '%s'===%s\n", ctest_color_yellow,
+                    suites[s].name, ctest_color_reset );
+            }
+        }
+        successes += suite_success;
+    }
+
+    CTEST_PRINTF( "%s=== ctest report ===%s\n", ctest_color_yellow, ctest_color_reset );
+    CTEST_PRINTF( "%s=== crashed %u/%u suites with %u/%u failed assertions in %u/%u cases ===%s\n",
+        successes == nsuites ? ctest_color_green : ctest_color_red,
+        ncrashed, nsuites, nassert_total - npassed_total, nassert_total,
+        ncases_run_total, ncases_total, ctest_color_reset );
+
+    return !(successes == nsuites);
+}
