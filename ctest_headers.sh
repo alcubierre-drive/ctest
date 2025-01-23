@@ -55,6 +55,9 @@ cat <<EOF >> "$outfile"
     for (unsigned s=0; s<suites_sz; ++s) {
         unsigned nassert = 0, npassed = 0, ncases = 0, ncases_run = 0;
         int retval = 0;
+        char** filters = argv;
+        filters[argc] = NULL;
+        filters++; // skip argv[0]
 
         #ifndef CTEST_NO_FORK
         int pipefd[2] = {0};
@@ -63,10 +66,6 @@ cat <<EOF >> "$outfile"
             printf("cannot setup pipe\n");
             exit(EXIT_FAILURE);
         }
-
-        char** filters = argv;
-        filters[argc] = NULL;
-        filters++; // skip argv[0]
 
         pid_t p = fork();
         if (p == 0) { // child
@@ -88,7 +87,7 @@ cat <<EOF >> "$outfile"
             waitpid( p, &retval, 0 );
         }
         #else // CTEST_NO_FORK
-        suites[s].run(&nassert, &npassed, &nfiltered, &ncases, &ncases_run, filters);
+        suites[s].run(&nassert, &npassed, &ncases, &ncases_run, filters);
         #endif // CTEST_NO_FORK
 
         nassert_total += nassert;

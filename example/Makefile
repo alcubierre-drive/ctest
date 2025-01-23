@@ -5,7 +5,7 @@ EXE := main.x
 
 .PHONY: $(EXE) ctest_run.h
 
-CFLAGS += -I..
+CFLAGS += -I.. #-DCTEST_NO_FORK
 
 $(EXE): $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJ) -o $(EXE)
