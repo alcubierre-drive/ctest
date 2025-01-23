@@ -55,6 +55,10 @@ cat <<EOF > "$outfile"
 
 #include "ctest.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 EOF
 
 funcs=()
@@ -85,4 +89,8 @@ cat <<EOF >> "$outfile"
     filters++; // skip argv[0]
     return ctest_run_suites( suites, nsuites, filters );
 }
+
+#ifdef __cplusplus
+}
+#endif
 EOF

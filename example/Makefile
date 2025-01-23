@@ -11,10 +11,12 @@ DEP_CPP := $(patsubst %.cpp,%.cpp.d,$(SRC_CPP))
 
 BIN := main.x
 
-.PHONY: $(BIN) ctest_run.h
+.PHONY: $(BIN) main.c ctest_run.h
 
-$(BIN): $(OBJ_C) $(OBJ_CPP)
-	$(CC) $(LDFLAGS) $^ -o $@
+$(BIN): $(OBJ_C) $(OBJ_CPP) main.c
+	$(CC) $(LDFLAGS) $(filter-out main.c,$^) -o $@
+
+-include $(DEP_C) $(DEP_CPP)
 
 CFLAGS += -MMD -Wall -Wextra -pedantic #-DCTEST_NO_FORK
 
