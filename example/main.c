@@ -3,5 +3,6 @@
 
 // this file include an argument parser, which soon will be part of ctest
 int main(int argc, char** argv) {
+    (void)argc;
     return ct_run(argv+1);
 }
