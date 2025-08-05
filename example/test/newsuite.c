@@ -1,14 +1,14 @@
-#include "../ctest.h"
+#define CT_SUITE_NAME "newsuite"
+#include <ctest.h>
 
-INI_SUITE( newsuite, yos ) {
-    CTEST_CHK( 1 );
-    /* CTEST_CHK( 0 ); */
+CT_TEST( yos ) {
+    CT_CHECK( 1 );
+    /* CT_CHECK( 0 ); */
 }
-NEXT_CASE( newsuite, nos, yos ) {
-    CTEST_CHK( 1 );
-    CTEST_CHK( 1 == 0 );
+CT_TEST( nos ) {
+    CT_CHECK( 1 );
+    CT_CHECK( 1 == 0 );
 }
-NEXT_CASE( newsuite, dos, nos ) {
+CT_TEST( dos ) {
 }
-END_SUITE( newsuite, dos )
 

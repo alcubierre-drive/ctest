@@ -1,17 +1,17 @@
-#include "../ctest.h"
+#define CT_SUITE_NAME "TESTSUITE"
+#include <ctest.h>
 
-INI_SUITE( TESTSUITE, yos ) {
-    CTEST_CHK( 1 );
-    /* CTEST_CHK( 0 ); */
+CT_TEST( yos ) {
+    CT_CHECK( 1 );
+    /* CT_CHECK( 0 ); */
 }
-NEXT_CASE( TESTSUITE, nos, yos ) {
-    CTEST_CHK( 1 );
-    /* CTEST_CHK( 0 ); */
+CT_TEST( nos ) {
+    CT_CHECK( 1 );
+    /* CT_CHECK( 0 ); */
 }
-NEXT_CASE( TESTSUITE, dos, nos ) {
+CT_TEST( dos ) {
     char* ptr = NULL;
     char** xptr = &ptr;
     printf( "%s\n", *xptr );
 }
-END_SUITE( TESTSUITE, dos )
 

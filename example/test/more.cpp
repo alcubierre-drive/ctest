@@ -1,6 +1,8 @@
-#include "../ctest.h"
+#define CT_SUITE_NAME "more"
+#include <ctest.h>
 
-INI_SUITE( cppstuff, first ) {
-    CTEST_CHK( 1 );
+CT_TEST( first ) {
+    CT_CHECK( 1 );
 }
-END_SUITE( cppstuff, first )
+
+CT_TEST( second ) {}

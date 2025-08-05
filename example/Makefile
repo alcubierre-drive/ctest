@@ -9,9 +9,12 @@ OBJ_CPP := $(patsubst %.cpp,%.cpp.o,$(SRC_CPP))
 DEP_C := $(patsubst %.c,%.c.d,$(SRC_C))
 DEP_CPP := $(patsubst %.cpp,%.cpp.d,$(SRC_CPP))
 
+CXXFLAGS += -I..
+CFLAGS += -I..
+
 BIN := main.x
 
-.PHONY: $(BIN) main.c ctest_run.h
+.PHONY: $(BIN) main.c
 
 $(BIN): $(OBJ_C) $(OBJ_CPP) main.c
 	$(CC) $(LDFLAGS) $(filter-out main.c,$^) -o $@
@@ -19,11 +22,6 @@ $(BIN): $(OBJ_C) $(OBJ_CPP) main.c
 -include $(DEP_C) $(DEP_CPP)
 
 CFLAGS += -MMD -Wall -Wextra -pedantic #-DCTEST_NO_FORK
-
-main.c: ctest_run.h
-
-ctest_run.h:
-	./ctest_run.sh -C -i test/ -o ctest_run.h
 
 %.c.o: %.c %.h Makefile
 	$(CC) -c $< -o $@ $(CFLAGS)
