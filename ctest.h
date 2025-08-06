@@ -8,12 +8,10 @@
 
 #ifdef __cplusplus
 #define CT_EXTERN extern "C"
-#define CT_VISIBLE extern "C"
 #include <cstdio>
 #include <cstring>
 #else
 #define CT_EXTERN extern
-#define CT_VISIBLE 
 #include <stdio.h>
 #include <string.h>
 #endif
@@ -59,8 +57,14 @@ static ct_suite_t ct_suite = {0};
 CT_EXTERN ct_suite_t* ct_suites[CT_MAX_SUITES];
 CT_EXTERN unsigned ct_nsuites;
 #else
-CT_VISIBLE ct_suite_t* ct_suites[CT_MAX_SUITES] = {0};
-CT_VISIBLE unsigned ct_nsuites = 0;
+#ifdef __cplusplus
+extern "C" {
+#endif
+ct_suite_t* ct_suites[CT_MAX_SUITES] = {0};
+unsigned ct_nsuites = 0;
+#ifdef __cplusplus
+}
+#endif
 #endif
 
 // stupid initializer code
@@ -116,6 +120,14 @@ static inline void ct_test_append( const char* name, void (*run)( void ) ) {
         ct_test_append( #name, ct__test__##name ); \
     } \
     static void ct__test__##name( void )
+// and this is another one where the name can be different from the function
+// name
+#define CT_TEST_NAME( fname, tname ) \
+    static void ct__test__##fname ( void ); \
+    INITIALIZER( ct__test__register_##fname ) { \
+        ct_test_append( tname, ct__test__##fname ); \
+    } \
+    static void ct__test__##fname ( void )
 
 // we "need" colors
 static const char ct_color_red[] = "\x1b[31;1m",
@@ -133,6 +145,26 @@ static const char ct_color_red[] = "\x1b[31;1m",
     } \
 }
 
+#ifndef CT_NAME_DELIM
+#define CT_NAME_DELIM ","
+#endif//CT_NAME_DELIM
+
+/** substring iteration */
+static inline void ct_strsit( const char* str_, const char* delim,
+        void (*iter)(const char* str, void* ctx), void* ctx ) {
+    if (!delim || !str_) return;
+    char* str = (char*)malloc(strlen(str_)+1); strcpy(str, str_);
+    for (char* tok=strtok(str,delim); tok!=NULL; tok=strtok(NULL,delim))
+        (*iter)(tok, ctx);
+    free(str);
+}
+/** filter substring iteration */
+typedef struct { int* matches_case_filters; const char* filter; } ct_strsit_iter_ctx_t;
+static inline void ct_strsit_iter( const char* name, void* ctx_ ) {
+    ct_strsit_iter_ctx_t* ctx = (ct_strsit_iter_ctx_t*)ctx_;
+    if (!strcmp(name, ctx->filter)) *ctx->matches_case_filters += 1;
+}
+
 /**
  * returns nfilters, checks suite name and test (index i) name and puts result
  * into ptrs matches_case_filters and matches_suite_filters
@@ -143,7 +175,8 @@ static inline int ct_matches_filters( char** filters, ct_suite_t* s, int i,
     *matches_case_filters = *matches_suite_filters = 0;
     for (char** f = filters; *f; f++) {
         nfilters++;
-        if (!strcmp(s->tests[i].name, *f)) *matches_case_filters += 1;
+        ct_strsit_iter_ctx_t ctx = { matches_case_filters, *f };
+        ct_strsit( s->tests[i].name, CT_NAME_DELIM, ct_strsit_iter, (void*)&ctx );
         if (!strcmp(s->name, *f)) *matches_suite_filters += 1;
     }
     return nfilters;
@@ -289,4 +322,12 @@ static inline int ct_run( char** filters ) {
         ncases_run_total, ncases_total, ct_color_reset );
 
     return !(successes == ct_nsuites_nz);
+}
+
+static inline int ct_list_or_run( int argc, char** argv ) {
+    argv[argc] = NULL;
+    if (argc <= 1) return ct_run(argv+argc);
+
+    if (!strcmp(argv[1],"-l")) return ct_list(argv+2);
+    else                       return ct_run(argv+1);
 }

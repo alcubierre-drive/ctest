@@ -22,9 +22,7 @@ global variables are defined. You can then run all suites as follows
 #include <ctest.h>
 
 int main( int argc, char** argv ) {
-    (void) argc;
-    char** filters = argv+1;
-    return ct_run(filters);
+    return ct_list_or_run( argc, argv );
 }
 ```
 
@@ -35,4 +33,10 @@ In default mode, ctest runs all suites in a separate process (via ``fork()``),
 such that crashes can be recorded and contained in the output. This behavior can
 be changed by defining ``CT_NO_FORK``.
 
-See example [in the repo](example/)
+See example [in the repo](example/).
+
+You can give test cases multiple "tags" that are filtered for if you use
+``CT_TEST_NAME`` instead of ``CT_TEST`` and give the test function (first arg) a
+specific name (second arg, string). Substrings separated by a comma (``","``,
+can be changed by setting ``CT_NAME_DELIM``) are filtered individually, such
+that classes of tests within a suite as well as across suites can be filtered.
