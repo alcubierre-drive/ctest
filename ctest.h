@@ -10,10 +10,12 @@
 #define CT_EXTERN extern "C"
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #else
 #define CT_EXTERN extern
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #endif
 
 #ifndef CT_PRINTF
@@ -24,6 +26,7 @@ typedef struct ct_test_t ct_test_t;
 struct ct_test_t {
     void (*run)( void );
     const char* name;
+    int hidden;
 };
 
 #ifndef CT_SUITE_MAX_FUNCS
@@ -127,19 +130,19 @@ INITIALIZER_PASTE(CT_SUITE_NAME) {
     }
 }
 
-static inline void ct_test_append( const char* name, void (*run)( void ) ) {
-    ct_test_t t = { run, name };
+static inline void ct_test_append( const char* name, void(*run)(void), int hidden ) {
+    ct_test_t t = { run, name, hidden };
     if (ct_suite.ntests < CT_SUITE_MAX_FUNCS)
         ct_suite.tests[ct_suite.ntests++] = t;
     else
         CT_PRINTF( "too many tests (%u) in suite %s, redefine CT_SUITE_MAX_FUNCS\n",
                  ct_suite.ntests+1, CT_EXPAND_AND_STRINGIFY(CT_SUITE_NAME) );
 }
-// this is the macro to define test functions
+// this is the standard macro to define test functions
 #define CT_TEST( name ) \
     static void ct__test__##name( void ); \
     INITIALIZER( ct__register__test__##name ) { \
-        ct_test_append( #name, ct__test__##name ); \
+        ct_test_append( #name, ct__test__##name, 0 ); \
     } \
     static void ct__test__##name( void )
 // and this is another one where the name can be different from the function
@@ -147,7 +150,21 @@ static inline void ct_test_append( const char* name, void (*run)( void ) ) {
 #define CT_TEST_NAME( fname, tname ) \
     static void ct__test__##fname ( void ); \
     INITIALIZER( ct__register__test__##fname ) { \
-        ct_test_append( tname, ct__test__##fname ); \
+        ct_test_append( tname, ct__test__##fname, 0 ); \
+    } \
+    static void ct__test__##fname ( void )
+// this one is for hidden tests
+#define CT_TEST_HIDDEN( name ) \
+    static void ct__test__##name( void ); \
+    INITIALIZER( ct__register__test__##name ) { \
+        ct_test_append( #name, ct__test__##name, 1 ); \
+    } \
+    static void ct__test__##name( void )
+// this one too
+#define CT_TEST_NAME_HIDDEN( fname, tname ) \
+    static void ct__test__##fname ( void ); \
+    INITIALIZER( ct__register__test__##fname ) { \
+        ct_test_append( tname, ct__test__##fname, 1 ); \
     } \
     static void ct__test__##fname ( void )
 
@@ -222,11 +239,20 @@ static inline void ct_suite_run( ct_suite_t* s, unsigned* nassert,
         int matches_suite_filters = 0;
         int nfilters = ct_matches_filters( filters, s, i, &matches_case_filters, &matches_suite_filters );
         if (matches_suite_filters || matches_case_filters || nfilters==0) {
-            CT_PRINTF( "... run test '%s'\n", s->tests[i].name );
-            nc_run++;
-            s->tests[i].run();
+            if (s->tests[i].hidden) {
+                if (matches_case_filters || matches_suite_filters) {
+                    CT_PRINTF( "... run test '%s'\n", s->tests[i].name );
+                    s->tests[i].run();
+                    nc++;
+                    nc_run++;
+                }
+            } else {
+                CT_PRINTF( "... run test '%s'\n", s->tests[i].name );
+                s->tests[i].run();
+                nc_run++;
+            }
         }
-        nc++;
+        if (!s->tests[i].hidden) nc++;
     }
     *nassert = s->nasserts;
     *npassed = s->nasserts-s->nproblems;
@@ -256,7 +282,8 @@ static inline int ct_list( char** filters ) {
             int matches_suite_filters = 0;
             int nfilters = ct_matches_filters( filters, ss, i, &matches_case_filters, &matches_suite_filters );
             if (matches_suite_filters || matches_case_filters || nfilters==0) {
-                CT_PRINTF( "%s-> case%s %s\n", ct_color_green, ct_color_reset, ss->tests[i].name );
+                CT_PRINTF( "%s->%ccase%s %s\n", ss->tests[i].hidden ? ct_color_red : ct_color_green,
+                        ss->tests[i].hidden ? '.' : ' ', ct_color_reset, ss->tests[i].name );
                 nc_run++;
             }
             nc++;

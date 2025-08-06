@@ -12,3 +12,7 @@ CT_TEST( nos ) {
 CT_TEST( dos ) {
 }
 
+CT_TEST_HIDDEN( surprise ) {
+    CT_CHECK( 1 );
+    /* CT_CHECK( 0 ); */
+}
