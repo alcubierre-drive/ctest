@@ -227,7 +227,7 @@ static inline int ct_list( char** filters ) {
         if (ss->ntests == 0) continue;
         ct_nsuites_nz++;
 
-        CT_PRINTF( "%s%s%s...\n", ct_color_yellow, ss->name, ct_color_reset );
+        CT_PRINTF( "%s>suite<%s %s\n", ct_color_yellow, ct_color_reset, ss->name );
         unsigned nc = 0, nc_run = 0;
         for (unsigned i=0; i<ss->ntests; ++i) {
             int matches_case_filters = 0;
@@ -240,12 +240,13 @@ static inline int ct_list( char** filters ) {
             nc++;
         }
         if (nc != nc_run)
-            CT_PRINTF( "...%s%3u/%3u cases%s\n", ct_color_yellow, nc_run, nc, ct_color_reset );
+            CT_PRINTF( "%s>suite<%s %s filtered %3u/%3u cases\n", ct_color_yellow,
+                    ct_color_reset, ss->name, nc_run, nc );
         nc_total += nc;
         nc_total_run += nc_run;
     }
     if (nc_total != nc_total_run)
-        CT_PRINTF( "%s=== filtered %3u/%3u cases in %u suites%s\n", ct_color_yellow,
+        CT_PRINTF( "%s=== filtered %3u/%3u cases in %u suites ===%s\n", ct_color_yellow,
                 nc_total_run, nc_total, ct_nsuites_nz, ct_color_reset );
     return 0;
 }
