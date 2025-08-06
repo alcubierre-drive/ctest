@@ -1,4 +1,4 @@
-#define CT_SUITE_NAME "newsuite"
+#define CT_SUITE_NAME newsuite
 #include <ctest.h>
 
 CT_TEST( yos ) {

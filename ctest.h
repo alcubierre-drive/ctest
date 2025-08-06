@@ -68,16 +68,19 @@ unsigned ct_nsuites = 0;
 #endif
 
 // stupid initializer code
+#ifndef CT_SKIP_INITIALIZERS
+
 #ifdef __cplusplus
     #define INITIALIZER(f) \
         static void f(void); \
-        struct f##_t_ { f##_t_(void) { f(); } }; static f##_t_ f##_; \
+        struct CT_PASTE_HELPER(f,_t_) { CT_PASTE_HELPER(f,_t_)(void) { f(); } }; \
+        static CT_PASTE_HELPER(f,_t_) CT_PASTE_HELPER(f,_); \
         static void f(void)
 #elif defined(_MSC_VER)
     #pragma section(".CRT$XCU",read)
     #define INITIALIZER2_(f,p) \
         static void f(void); \
-        __declspec(allocate(".CRT$XCU")) void (*f##_)(void) = f; \
+        __declspec(allocate(".CRT$XCU")) void (*CT_PASTE_HELPER(f,_))(void) = f; \
         __pragma(comment(linker,"/include:" p #f "_")) \
         static void f(void)
     #ifdef _WIN64
@@ -91,15 +94,34 @@ unsigned ct_nsuites = 0;
         static void f(void)
 #endif
 
+#else // CT_SKIP_INITIALIZERS
+
+    #ifdef __cplusplus
+        #define CT_INITIALIZER_PREFIX extern "C"
+    #else
+        #define CT_INITIALIZER_PREFIX 
+    #endif
+
+    #define INITIALIZER(f) \
+        CT_INITIALIZER_PREFIX void f( void )
+
+#endif // CT_SKIP_INITIALIZERS
+
 #ifndef CT_SUITE_NAME
-#define CT_SUITE_NAME __FILE__
+#define CT_SUITE_NAME _anon_
 #endif
 
+#define CT_PASTE_HELPER(X, Y) X##Y
+#define CT_REGISTER_NAME(X) ct__register__suite__ ## X
+#define INITIALIZER_PASTE(X) INITIALIZER(CT_REGISTER_NAME(X))
+#define CT_STRINGIFY(X) #X
+#define CT_EXPAND_AND_STRINGIFY(X) CT_STRINGIFY(X)
+
 // append this file's suite to the list of all suites
-INITIALIZER( ct_suite_append ) {
+INITIALIZER_PASTE(CT_SUITE_NAME) {
     if (ct_nsuites < CT_MAX_SUITES) {
         ct_suites[ct_nsuites++] = &ct_suite;
-        strncpy( ct_suite.name, CT_SUITE_NAME, CT_SUITE_NAME_NCHAR-1 );
+        strncpy( ct_suite.name, CT_EXPAND_AND_STRINGIFY(CT_SUITE_NAME), CT_SUITE_NAME_NCHAR-1 );
     } else {
         CT_PRINTF( "too many test suites (%u), redefine CT_MAX_SUITES\n", ct_nsuites+1 );
     }
@@ -111,12 +133,12 @@ static inline void ct_test_append( const char* name, void (*run)( void ) ) {
         ct_suite.tests[ct_suite.ntests++] = t;
     else
         CT_PRINTF( "too many tests (%u) in suite %s, redefine CT_SUITE_MAX_FUNCS\n",
-                 ct_suite.ntests+1, CT_SUITE_NAME );
+                 ct_suite.ntests+1, CT_EXPAND_AND_STRINGIFY(CT_SUITE_NAME) );
 }
 // this is the macro to define test functions
 #define CT_TEST( name ) \
     static void ct__test__##name( void ); \
-    INITIALIZER( ct__test__register_##name ) { \
+    INITIALIZER( ct__register__test__##name ) { \
         ct_test_append( #name, ct__test__##name ); \
     } \
     static void ct__test__##name( void )
@@ -124,7 +146,7 @@ static inline void ct_test_append( const char* name, void (*run)( void ) ) {
 // name
 #define CT_TEST_NAME( fname, tname ) \
     static void ct__test__##fname ( void ); \
-    INITIALIZER( ct__test__register_##fname ) { \
+    INITIALIZER( ct__register__test__##fname ) { \
         ct_test_append( tname, ct__test__##fname ); \
     } \
     static void ct__test__##fname ( void )

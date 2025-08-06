@@ -1,4 +1,4 @@
-#define CT_SUITE_NAME "more"
+#define CT_SUITE_NAME more
 #include <ctest.h>
 
 CT_TEST( first ) {

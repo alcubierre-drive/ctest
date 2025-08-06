@@ -1,4 +1,4 @@
-#define CT_SUITE_NAME "TESTSUITE"
+#define CT_SUITE_NAME TESTSUITE
 #include <ctest.h>
 
 CT_TEST( yos ) {
