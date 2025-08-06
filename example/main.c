@@ -1,8 +1,10 @@
 #define CT_MAIN
 #include <ctest.h>
 
-// this file include an argument parser, which soon will be part of ctest
 int main(int argc, char** argv) {
-    (void)argc;
-    return ct_run(argv+1);
+    argv[argc] = NULL;
+    if (argc <= 1) return ct_run(argv+argc);
+
+    if (!strcmp(argv[1],"-l")) return ct_list(argv+2);
+    else                       return ct_run(argv+1);
 }

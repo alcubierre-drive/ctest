@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdio.h>
-#include <string.h>
 #ifndef CT_NO_FORK
 #include <sys/wait.h>
 #include <unistd.h>
@@ -11,9 +9,13 @@
 #ifdef __cplusplus
 #define CT_EXTERN extern "C"
 #define CT_VISIBLE extern "C"
+#include <cstdio>
+#include <cstring>
 #else
 #define CT_EXTERN extern
 #define CT_VISIBLE 
+#include <stdio.h>
+#include <string.h>
 #endif
 
 #ifndef CT_PRINTF
@@ -126,12 +128,32 @@ static const char ct_color_red[] = "\x1b[31;1m",
     ct_suite.nasserts++; \
     if (!(expr)) { \
         ct_suite.nproblems++; \
-        CT_PRINTF( "%s!!! %s  (%s:%i) failed at CT_CHECK(" #expr ") !!!%s\n", ct_color_red, \
+        CT_PRINTF( "%s!!! %s @%s:%i: CT_CHECK(" #expr ") failed!!!%s\n", ct_color_red, \
                 __func__, __FILE__, __LINE__, ct_color_reset ); \
     } \
 }
 
-static void ct_suite_run( ct_suite_t* s, unsigned* nassert,
+/**
+ * returns nfilters, checks suite name and test (index i) name and puts result
+ * into ptrs matches_case_filters and matches_suite_filters
+ */
+static inline int ct_matches_filters( char** filters, ct_suite_t* s, int i,
+        int* matches_case_filters, int* matches_suite_filters ) {
+    int nfilters = 0;
+    *matches_case_filters = *matches_suite_filters = 0;
+    for (char** f = filters; *f; f++) {
+        nfilters++;
+        if (!strcmp(s->tests[i].name, *f)) *matches_case_filters += 1;
+        if (!strcmp(s->name, *f)) *matches_suite_filters += 1;
+    }
+    return nfilters;
+}
+
+/**
+ * runs a test suite and puts result into pointers. applies filters using
+ * ct_matches_filters. ignores suites with zero tests.
+ */
+static inline void ct_suite_run( ct_suite_t* s, unsigned* nassert,
         unsigned* npassed, unsigned* ncases, unsigned* ncases_run,
         char** filters ) {
     if (s->ntests == 0) return;
@@ -143,14 +165,7 @@ static void ct_suite_run( ct_suite_t* s, unsigned* nassert,
     for (unsigned i=0; i<s->ntests; ++i) {
         int matches_case_filters = 0;
         int matches_suite_filters = 0;
-        int nfilters = 0;
-        char** f = filters;
-        while (*f) {
-            nfilters++;
-            if (!strcmp(s->tests[i].name, *f)) matches_case_filters++;
-            if (!strcmp(s->name, *f)) matches_suite_filters++;
-            f++;
-        }
+        int nfilters = ct_matches_filters( filters, s, i, &matches_case_filters, &matches_suite_filters );
         if (matches_suite_filters || matches_case_filters || nfilters==0) {
             CT_PRINTF( "... run test '%s'\n", s->tests[i].name );
             nc_run++;
@@ -165,6 +180,46 @@ static void ct_suite_run( ct_suite_t* s, unsigned* nassert,
     *ncases_run = nc_run;
 }
 
+/**
+ * lists all tests of all suites that are active given a list of filters.
+ * ignores suites with zero tests.
+ */
+static inline int ct_list( char** filters ) {
+    for (char** f = filters; *f; f++)
+        CT_PRINTF( "%s=== filter '%s' ===%s\n", ct_color_yellow, *f, ct_color_reset );
+    unsigned nc_total = 0, nc_total_run = 0;
+    unsigned ct_nsuites_nz = 0;
+    for (unsigned s=0; s<ct_nsuites; ++s) {
+        ct_suite_t* ss = ct_suites[s];
+        if (ss->ntests == 0) continue;
+        ct_nsuites_nz++;
+
+        CT_PRINTF( "%s%s%s...\n", ct_color_yellow, ss->name, ct_color_reset );
+        unsigned nc = 0, nc_run = 0;
+        for (unsigned i=0; i<ss->ntests; ++i) {
+            int matches_case_filters = 0;
+            int matches_suite_filters = 0;
+            int nfilters = ct_matches_filters( filters, ss, i, &matches_case_filters, &matches_suite_filters );
+            if (matches_suite_filters || matches_case_filters || nfilters==0) {
+                CT_PRINTF( "%s-> case%s %s\n", ct_color_green, ct_color_reset, ss->tests[i].name );
+                nc_run++;
+            }
+            nc++;
+        }
+        if (nc != nc_run)
+            CT_PRINTF( "...%s%3u/%3u cases%s\n", ct_color_yellow, nc_run, nc, ct_color_reset );
+        nc_total += nc;
+        nc_total_run += nc_run;
+    }
+    if (nc_total != nc_total_run)
+        CT_PRINTF( "%s=== filtered %3u/%3u cases in %u suites%s\n", ct_color_yellow,
+                nc_total_run, nc_total, ct_nsuites_nz, ct_color_reset );
+    return 0;
+}
+
+/**
+ * runs all suites that match the given filters
+ */
 static inline int ct_run( char** filters ) {
     unsigned npassed_total = 0, nassert_total = 0,
              ncases_total = 0, ncases_run_total = 0,
