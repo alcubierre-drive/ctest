@@ -1,3 +1,5 @@
+/** ctest.h developed by Lennart Klebl (c) 2025, GPLv3 */
+
 #pragma once
 
 #ifndef CT_NO_FORK
